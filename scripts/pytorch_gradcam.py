@@ -27,18 +27,41 @@ class FeatureExtractor():
         outputs = []
         self.gradients = []
         for name, module in self.model._modules.items():
-
-            if (self.archType == "normal" and name == "fc1"):
-                x = module(x.view(-1,self.model.channels[-1]*self.model.h3*self.model.w3))
-            elif (self.archType == "small" and name == "fc1"):
-                x = module(x.view(-1,self.model.channels[-1]*self.model.h1*self.model.w1))
-            elif (self.archType == "old" and name == "fc1"):
-                x = module(x.view(-1,128*9*10))
+            if(self.archType!="CLSTM"):
+                if (self.archType == "normal" and name == "fc1"):
+                    x = module(x.view(-1,self.model.channels[-1]*self.model.h*self.model.w))
+                elif (self.archType == "small" and name == "fc1"):
+                    x = module(x.view(-1,self.model.channels[-1]*self.model.h*self.model.w))
+                elif (self.archType == "old" and name == "fc1"):
+                    x = module(x.view(-1,128*9*10))
+                else:
+                    x = module(x)
+                if name in self.target_layers:
+                    x.register_hook(self.save_gradient)
+                    outputs += [x]
+   ##_-----------------------------------------------------------------           
             else:
-                x = module(x)
-            if name in self.target_layers:
-                x.register_hook(self.save_gradient)
-                outputs += [x]
+                if(self.archType=="CLSTM" and name=="endFC" and self.model.use_entire_seq==False):
+                    #operating on aggOut here instead to handle hook
+                    x = module(aggOut[-1].view(-1,self.model.nb_lstm_units*int(self.model.im_size[0]/((self.model.conv_stride*self.model.pool_kernel_size[0])**self.model.lstm_layers))*int(self.model.im_size[1]/((self.model.conv_stride*self.model.pool_kernel_size[0])**self.model.lstm_layers))))
+                elif(self.archType=="CLSTM" and name=="endFC"):
+                    x = module(temp.view(-1,len(self.model.effective_step)*self.model.nb_lstm_units*int(self.model.im_size[0]/((self.model.conv_stride*self.model.pool_kernel_size[0])**self.model.lstm_layers))*int(self.model.im_size[1]/((self.model.conv_stride*self.model.pool_kernel_size[0])**self.model.lstm_layers))))
+                else:
+                    x = module(x)
+                    
+                if name in self.target_layers:
+                    if(self.archType=="CLSTM" and name=="clstm" and self.model.use_entire_seq==False):
+                        aggOut = Variable(torch.stack(x[0]), requires_grad=True)
+                        aggOut.register_hook(self.save_gradient)
+                        outputs += [aggOut]#[x[0][-1]]
+                    elif(self.archType=="CLSTM" and name=="clstm"):
+                        temp = torch.stack(x[0])
+                        temp.register_hook(self.save_gradient)
+                        outputs += [temp]
+                    else:
+                        x.register_hook(self.save_gradient)
+                        outputs += [x]
+#-----------------------------------------------------------------
 
         return outputs, x
 

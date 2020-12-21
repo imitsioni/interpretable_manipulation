@@ -7,7 +7,7 @@ import image_render_code as imgutils
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import sklearn.preprocessing as scalers
-
+import time
 
 class TXTImporter(object):
     '''
@@ -24,11 +24,12 @@ class TXTImporter(object):
         scaler: scaler used for input data, if already computed during training
         gradcam_scaler_params: scaler used for visually interpretable data display, if already computed during training
     '''
-    def __init__(self, base_path, dataType, block_size, scale_pixels, blocks_per_frame, multi_class, block_horizon,colormap, scaler=None, gradcam_scaler_params=None):
+    def __init__(self, base_path, dataType, block_size, scale_pixels, blocks_per_frame, multi_class, block_horizon,colormap, scaler=None, gradcam_scaler_params=None,mono_color=False):
         self.data = []
         self.base_path = base_path
         self.block_size = block_size
         self.colormap = colormap
+        self.mono_color=mono_color
         self.dataType = dataType
         # Initialization
         self.force_data = {}
@@ -196,15 +197,19 @@ class TXTImporter(object):
         d_idx, b_idx = self.idxToRunDict[frame_idx]
         current_block_frame = utils.get_block(self.relative_datasets[d_idx], b_idx, self.block_size)
         current_block_frame_scaled = self.scaler.transform(current_block_frame)
-
-        imgOut = imgutils.renderImage(current_block_frame_scaled, self.cell_size, self.gradcam_scaler_params,self.colormap)
-
-        #move channel axis first
-        imgOut=imgOut.squeeze()
-        imgOut=np.moveaxis(imgOut,-1,0)
-
         frame_label = self.getLabel(frame_idx)
-        return imgOut, frame_label
+        if(self.mono_color):
+            return np.transpose(current_block_frame_scaled), frame_label
+        else:
+            t_start = time.time()
+            imgOut = imgutils.renderImage(current_block_frame_scaled, self.cell_size, self.gradcam_scaler_params,self.colormap)
+
+            #move channel axis first
+            imgOut=imgOut.squeeze()
+            imgOut=np.moveaxis(imgOut,-1,0)
+
+            print("render took: ", time.time()-t_start)
+            return imgOut, frame_label
 
     def getLabel(self, frame_idx):
         """ In the binary class problem we determine the label by comparing the UNSCALED

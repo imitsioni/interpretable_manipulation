@@ -88,6 +88,8 @@ def load_args(defaultConfig):
                         help="colormap to be used for input rendering")
     parser.add_argument('--modelName', '-m', type=str,
                         help="What the saved model should be called")
+    parser.add_argument('--model_type', '-ma', type=str,
+                        help="What architecture to use for the model (cnn,FC,LSTM)")
         
     args = parser.parse_args()
     
@@ -118,5 +120,8 @@ def load_args(defaultConfig):
         defaultConfig['colormap'] = args.colormap
     if(args.modelName is not None):
         defaultConfig['model_name'] = args.modelName
+    if(args.model_type is not None):
+        defaultConfig['model_type'] = args.model_type
+
 
     return defaultConfig,args
