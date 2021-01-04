@@ -81,7 +81,7 @@ else:
 #model definition used in the work
 model = networks.CLSTMEventNet(classes = 2, inputImgSize=(9,10),\
            channels_in=3,conv_kernel_size=config["clstm_kernel_size"],\
-           top_layer=True, avg_pool=False, batch_normalization = False,\
+           avg_pool=False, batch_normalization = False,\
            lstm_layers=config["clstm_layers"],step=config['imgs_out'],\
            conv_stride=1,device=device,\
            max_pool=False,
