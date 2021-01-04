@@ -177,13 +177,13 @@ class FeatureEvaluator(object):
             GT: The ground truth for the sample
             gradCamImage: The produced GradCam image for the sample
         '''
-        if(predClass==0 and GT == 0):
+        if(predClass==0 and GT==0):
             currentCase = 'TP'
-        elif(predClass==0 and GT == 1):
+        elif(predClass==0 and GT==1):
             currentCase = 'FP'
-        elif(predClass==1 and GT == 0):
+        elif(predClass==1 and GT==0):
             currentCase = 'FN'
-        elif(predClass==1 and GT == 1):
+        elif(predClass==1 and GT==1):
             currentCase = 'TN'
 
         self.caseCounts[currentCase] += 1
