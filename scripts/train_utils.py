@@ -25,20 +25,20 @@ class TrainUtils():
         labels_list = []
         time_start = time.time()
         for i, data in enumerate(self.train_loader, 0):
-            # get the inputs; data is a list of [inputs, labels]            
+            # Get the inputs; data is a list of [inputs, labels]            
             inputs, labels = data
             inputs = inputs.to(self.device)
             inputs = inputs.float()
 
             labels = labels.to(self.device)
-            # zero the parameter gradients
+            # Zero the parameter gradients
             self.optimizer.zero_grad()
 
-            # forward + backward + optimize
+            # Forward + backward + optimize
             outputs = self.model(inputs)
             labels.reshape(inputs.shape[0],-1)
 
-            #depending on if it's multi-class prediction, save predictions accordingly
+            # Depending on if it's multi-class prediction, save predictions accordingly
             if is_multi:
                 loss = self.criterion(outputs, labels)
                 prediction = outputs.detach()
@@ -52,7 +52,7 @@ class TrainUtils():
             loss.backward()
             self.optimizer.step()
 
-            # print statistics
+            # Print statistics
             running_loss += loss.item()
             losses.append(loss.item())
             if i % 200 == 199:    # print every 200 mini-batches
@@ -75,16 +75,16 @@ class TrainUtils():
         labels_list = []
         with torch.no_grad():
             for i, data in enumerate(self.test_loader):
-                # get the inputs; data is a list of [inputs, labels]
+                # Get the inputs; data is a list of [inputs, labels]
                 
                 inputs, labels = data
                 inputs = inputs.to(self.device)
                 labels = labels.to(self.device)
-                # forward + backward + optimize
+                # Forward + backward + optimize
                 outputs = self.model(inputs.float())
                 labels.reshape(inputs.shape[0],-1)
 
-                #depending on if it's multi-class prediction, save predictions accordingly
+                # Depending on if it's multi-class prediction, save predictions accordingly
                 if is_multi:
                     loss = self.criterion(outputs, labels)
                     prediction = outputs.detach()
@@ -96,7 +96,7 @@ class TrainUtils():
 
                 labels_list.extend(labels.float().view(-1).cpu().numpy())
 
-                # print statistics
+                # Print statistics
                 running_loss += loss.item()
                 losses.append(loss.item())
             print('=========================================================')
@@ -108,7 +108,7 @@ class TrainUtils():
             scores = sklm.classification_report(labels_list, predictions_list,output_dict=True)
             epoch_f1=scores['weighted avg']['f1-score']
             
-            #Save and keep track of best performing model parameters
+            # Save and keep track of best performing model parameters
             if(epoch_f1>self.best_val_F1 and model_title!=None):
                 folder = "trained_models/"+model_title+"/"
                 if not os.path.exists(folder):
@@ -123,10 +123,10 @@ class TrainUtils():
         if not os.path.exists(folder):
             os.makedirs(folder)
 
-        #save model checkpoint
+        # Save model checkpoint
         torch.save(self.model.state_dict(), folder+"checkpoint.pt")
         
-        #save data and graphs for losses and F1 scores if available
+        # Save data and graphs for losses and F1 scores if available
         if(train_losses!=None and validation_losses!=None):
             lossGraph = plt.figure(dpi=200)
             plt.plot(train_losses,label="Train")
@@ -150,7 +150,7 @@ class TrainUtils():
             pickle.dump(train_F1s, open(folder+"train_F1s.p", "wb"))
             pickle.dump(validation_F1s, open(folder+"validation_F1s.p", "wb"))
             
-        #save used config for easier reproduction when loading model
+        # Save used config for easier reproduction when loading model
         if(config!=None):
             pickle.dump(config,open(folder+"config.p","wb"))
 

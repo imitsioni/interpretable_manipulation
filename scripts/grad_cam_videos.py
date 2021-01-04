@@ -13,10 +13,12 @@ from pytorch_gradcam import *
 
 
 class ModelOutputsVideo(ModelOutputs):
-    """ Class for making a forward pass, and getting:
+    """ 
+    Class for making a forward pass, and getting:
     1. The network output.
-    2. Activations from intermeddiate targetted layers.
-    3. Gradients from intermeddiate targetted layers. """
+    2. Activations from intermediate targetted layers.
+    3. Gradients from intermediate targetted layers. 
+    """
 
     def __init__(self, model, target_layers, archType):
         self.model = model
@@ -74,7 +76,7 @@ class GradCamVideo(GradCam):
 
         grads_val = self.extractor.get_gradients()[-1].cpu().data.numpy()
         
-        #Need to put sequence dimension in correct spot again if using pytorch CLSTM
+        # Need to put sequence dimension in correct spot again if using pytorch CLSTM
         if(self.archType=="CLSTM"):
             grads_val = grads_val.transpose(1,2,0,3,4)
             target = features[-1].permute(1,2,0,3,4)

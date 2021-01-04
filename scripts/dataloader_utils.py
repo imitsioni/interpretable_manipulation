@@ -46,7 +46,7 @@ class EventDataloader(udata.Dataset):
 
     def __getitem__(self, idx):
         
-        #zip together a sequence of input images and their true labels if requested (used for recurrent models)
+        # Zip together a sequence of input images and their true labels if requested (used for recurrent models)
         if(self.imgs_out>1):
             
             outs = []
@@ -63,7 +63,7 @@ class EventDataloader(udata.Dataset):
                 out_net_frames = np.array(out_net_frames)
                 out_viz_frames = np.array(out_viz_frames)
 
-                #reshape to have channel first, then sequence length
+                # Reshape to have channel first, then sequence length
                 out_net_frames = out_net_frames.reshape(3,self.imgs_out,9,self.block_size)
                 out_viz_frames = out_viz_frames.reshape(3,self.imgs_out,9,self.block_size)
                 
@@ -76,13 +76,13 @@ class EventDataloader(udata.Dataset):
             
                 out_frames, labels = zip(*outs)
                 out_frames = np.array(out_frames)
-                #reshape to have channel first, then sequence length
+                # Reshape to have channel first, then sequence length
                 out_frames = out_frames.reshape(3,self.imgs_out,9,self.block_size)
                 
-                #ground truth label for a sequence is the label of the last image
+                # Ground truth label for a sequence is the label of the last image
                 return [out_frames,labels[-1]]
             
-        #otherwise just return one image as the datapoint
+        # Otherwise just return one image as the datapoint
         else:
             if(self.dataType=="visual"):
                 out_net = self.dh.getFrame(idx)

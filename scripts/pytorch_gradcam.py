@@ -1,6 +1,6 @@
-'''
+"""
 Code adapted from https://github.com/jacobgil/pytorch-grad-cam/blob/master/gradcam.py
-'''
+"""
 
 import torch
 from torch.autograd import Variable
@@ -27,7 +27,7 @@ class FeatureExtractor():
         outputs = []
         self.gradients = []
         for name, module in self.model._modules.items():
-            #If not using CLSTM, simply reshape for last layer and attach gradient hooks.
+            # If not using CLSTM, simply reshape for last layer and attach gradient hooks.
             if(self.archType!="CLSTM"):
                 if (self.archType == "normal" and name == "fc1"):
                     x = module(x.view(-1,self.model.channels[-1]*self.model.h*self.model.w))
@@ -37,7 +37,7 @@ class FeatureExtractor():
                     x.register_hook(self.save_gradient)
                     outputs += [x]
        
-            #if using CLSTM, reshape for last FC layer, and keep gradients for all LSTM hidden representations in the sequence
+            # If using CLSTM, reshape for last FC layer, and keep gradients for all LSTM hidden representations in the sequence
             else:
                 if(self.archType=="CLSTM" and name=="endFC" and self.model.use_entire_seq==False):
 
@@ -149,15 +149,14 @@ class GradCam:
 
 
 class FeatureEvaluator(object):
-    '''
-    Class used for evaluating the importance of features by using the GradCam images. Can return the number of times a certain feature was above a threshold, as well as the number of times a feature was most important.
-    '''
+    """ Class used for evaluating the importance of features by using the GradCam images. Can return the number of times a
+    certain feature was above a threshold, as well as the number of times a feature was most important. """
     def __init__(self,featureThreshold=0.5, numFeatures = 9):
-        '''
+        """
         Inputs:
             featureThreshold: The threshold a feature must be above (0-1) to be included in the "above threshold" count
             numFeatures: How many features the input image / gradcam image contains
-        '''
+        """
         self.featureCounts = {'TP':[0,0,0,0,0,0,0,0,0], 'TN':[0,0,0,0,0,0,0,0,0], 'FP':[0,0,0,0,0,0,0,0,0], 'FN':[0,0,0,0,0,0,0,0,0]}
         self.featureCountsMax = {'TP':[0,0,0,0,0,0,0,0,0], 'TN':[0,0,0,0,0,0,0,0,0], 'FP':[0,0,0,0,0,0,0,0,0], 'FN':[0,0,0,0,0,0,0,0,0]}
         self.caseCounts = {'TP' : 0, 'TN' : 0, 'FP' : 0, 'FN' : 0}
@@ -170,13 +169,13 @@ class FeatureEvaluator(object):
         self.caseCounts = {'TP' : 0, 'TN' : 0, 'FP' : 0, 'FN' : 0}
 
     def update(self,predClass,GT,gradCamImage):
-        '''
+        """
         Updates the current results with a new sample.
         Inputs:
             PredClass: The predicted class for the sample
             GT: The ground truth for the sample
             gradCamImage: The produced GradCam image for the sample
-        '''
+        """
         if(predClass==0 and GT==0):
             currentCase = 'TP'
         elif(predClass==0 and GT==1):

@@ -10,7 +10,7 @@ import sklearn.preprocessing as scalers
 import time
 
 class TXTImporter(object):
-    '''
+    """
     Data handler for importing the training data from TXT.
     Inputs:
         base_path: Path to the training data
@@ -24,7 +24,7 @@ class TXTImporter(object):
         scaler: scaler used for input data, if already computed during training
         gradcam_scaler_params: scaler used for visually interpretable data display, if already computed during training
         mono_color: does not render a colored image if set to True, only a matrix with the data
-    '''
+    """
     def __init__(self, base_path, dataType, block_size, scale_pixels, blocks_per_frame, multi_class, block_horizon,colormap, scaler=None, gradcam_scaler_params=None,mono_color=False):
         self.data = []
         self.base_path = base_path
@@ -109,7 +109,7 @@ class TXTImporter(object):
             self.force_data.update({file_idx : forces})
             full_forces = np.append(full_forces, forces, axis = 0)
 
-        full_forces = full_forces[1:,] # Remove the first "trash" line that was created with np.empty
+        full_forces = full_forces[1:,] # remove the first "trash" line that was created with np.empty
 
         for file_idx, filename in enumerate(listOfPositionFiles):
             time, seq, p_x, p_y, p_z = np.loadtxt(filename, usecols = (0, 1, 4, 5, 6), skiprows = 1, delimiter = ',', unpack = True)
@@ -157,8 +157,10 @@ class TXTImporter(object):
         return relative_full[1:,:]
 
     def getGradCamScalerParams(self):
-        ''' Calculates scalers required for full input dataset,
-        as well as for GradCam visualization.'''
+        """
+        Calculates scalers required for full input dataset,
+        as well as for GradCam visualization.
+        """
         # first get the relative_full dataset
         relative_full = self.createRelativefull()
 
@@ -175,10 +177,10 @@ class TXTImporter(object):
         self.gradcam_scaler_params = [positions_min_max, forces_min_max, inputs_min_max]
 
     def createIdxToRunBlockDict(self):
-        '''
+        """
         Creates a dictionary that translates between full dataset index, and sub-dataset ID + block id
         to be fetched from the CSV importers.
-        '''
+        """
         dictLengths = [int(len(self.relative_datasets[dk])/self.block_size)-self.block_horizon for dk in self.relative_datasets.keys()]
         totalLength = np.sum(dictLengths)
 
@@ -191,9 +193,9 @@ class TXTImporter(object):
             self.idxToRunDict.update({i:(currDictIdx,i-accrued)})
 
     def getFrame(self, frame_idx):
-        '''
+        """
         Returns the input image and class label for a given dataset index
-        '''
+        """
         frame_label = 0
         d_idx, b_idx = self.idxToRunDict[frame_idx]
         current_block_frame = utils.get_block(self.relative_datasets[d_idx], b_idx, self.block_size)
@@ -213,9 +215,11 @@ class TXTImporter(object):
             return imgOut, frame_label
 
     def getLabel(self, frame_idx):
-        """ In the binary class problem we determine the label by comparing the UNSCALED
+        """ 
+        In the binary class problem we determine the label by comparing the UNSCALED
         relative displacement at the last timestep of a block self.block_horizon ahead with
-        self.label threshold."""
+        self.label threshold.
+        """
         d_idx, b_idx = self.idxToRunDict[frame_idx]
 
         if not self.multi_class:
@@ -224,10 +228,12 @@ class TXTImporter(object):
             if np.abs(next_block_frame[-1,2]) <= self.label_threshold:
                 frame_label = 1
 
-        """ For the multi-class problem, every frame's label will be a one-hot vector x
+        """ 
+        For the multi-class problem, every frame's label will be a one-hot vector x
         where x_i (1 < i <= self.block_horizon) is 1 if block i indicates stuck.
         We add an extra element x[0] = 1 that will only be used to denote that
-        none of the blocks within the horizon had a stuckage."""
+        none of the blocks within the horizon had a stuckage.
+        """
         if self.multi_class:
             frame_label_onehot = np.zeros((self.block_horizon + 1, 1))
             frame_label_onehot[0] = 1
@@ -259,9 +265,9 @@ class TXTImporter(object):
         return scaled_frame
 
     def getVisIntFrame(self, frame_idx):
-        '''
+        """
         Scales an image according to the visually intuitive scalers used for interpretation.
-        '''
+        """
         d_idx, b_idx = self.idxToRunDict[frame_idx]
 
         current_block_frame = utils.get_block(self.relative_datasets[d_idx], b_idx, self.block_size)

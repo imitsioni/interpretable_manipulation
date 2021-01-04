@@ -1,6 +1,3 @@
-'''
-MISC Utilities.
-'''
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -59,7 +56,7 @@ def get_feature_abs_max(data):
 
 def load_args(defaultConfig):
     
-    #load args
+    # Load args
     parser = argparse.ArgumentParser(description='Training script for EventNet')
 
     parser.add_argument('--resume', '-r', action='store_true',
@@ -93,11 +90,11 @@ def load_args(defaultConfig):
         
     args = parser.parse_args()
     
-    if len(sys.argv) < 2: #model name must at least be given
+    if len(sys.argv) < 2: # model name must at least be given
         parser.print_help()
         sys.exit(1)
         
-    #overwrite defaults with any given arguments
+    # Overwrite defaults with any given arguments
     if(args.learning_rate is not None):
         defaultConfig['learning_rate'] = args.learning_rate
     if(args.batch_size is not None):

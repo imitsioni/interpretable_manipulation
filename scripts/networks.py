@@ -4,11 +4,10 @@ import warnings
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-#CNN 
 class MultiEventNetTemplate(nn.Module):
     def __init__(self, inputImgSize,channels,filterSizes,strides,paddings, biases=True,classes=2, channels_in=1): 
         '''
-        CNN model definition used in the work.
+        CNN model definition used in the manuscript.
         arguments:
             inputImgSize: The dimensions of the input representation, given in height, width
             channels: Amount of channels (filters) to be used for each conv layer, starting with the first
@@ -37,7 +36,7 @@ class MultiEventNetTemplate(nn.Module):
             self.conv3 = nn.Conv2d(channels[1], channels[2], filterSizes[2],\
                                    stride=strides[2], padding=(paddings[2]), bias=biases)
 
-        #calculate final shape of the input for the fully connected layer
+        # Calculate final shape of the input for the fully connected layer
         self.h=int(((self.inputImgSize[0]+(2*paddings[0][0]) - (self.filterSizes[0][0]-1) -1)/self.strides[0][0])+1)
         if(len(self.channels)>1):
             self.h=int(((self.h+(2*paddings[1][0]) - (self.filterSizes[1][0]-1) -1)/self.strides[1][0])+1)
@@ -74,7 +73,7 @@ Based on implementation from https://github.com/automan000/Convolution_LSTM_pyto
 """
 class CLSTMEventNet(torch.nn.Module):
     '''
-    CLSTM model definition used in the work.
+    CLSTM model definition used in the manuscript.
     arguments:
         inputImgSize: The dimensions of the input representation, given in height, width
         classes: Number of classes the task has.
@@ -157,7 +156,6 @@ class CLSTMEventNet(torch.nn.Module):
         self.sm = torch.nn.Softmax(dim=1)
 
     def forward(self, x):
-
         output, hiddens = self.clstm(x)
 
         if self.use_entire_seq:
@@ -211,7 +209,6 @@ class ConvLSTMCell(nn.Module):
         self.Wco = None
 
     def forward(self, x, h, c):
-
         ci = torch.sigmoid(self.Wxi(x) + self.Whi(h) + c * self.Wci)
         cf = torch.sigmoid(self.Wxf(x) + self.Whf(h) + c * self.Wcf)
         cc = cf * c + ci * torch.tanh(self.Wxc(x) + self.Whc(h))
