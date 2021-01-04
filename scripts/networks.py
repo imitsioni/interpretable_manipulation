@@ -3,12 +3,12 @@ import torch.nn as nn
 import warnings
 import torch.nn.functional as F
 from torch.autograd import Variable
-#from convolution_lstm import ConvLSTM
-#import convolution_lstm.ConvLSTM
 
+#CNN 
 class MultiEventNetTemplate(nn.Module):
     def __init__(self, inputImgSize,channels,filterSizes,strides,paddings, biases=True,classes=2, channels_in=1): 
         '''
+        CNN model definition used in the work.
         arguments:
             inputImgSize: The dimensions of the input representation, given in height, width
             channels: Amount of channels (filters) to be used for each conv layer, starting with the first
@@ -72,12 +72,10 @@ class MultiEventNetTemplate(nn.Module):
 class EventNetFC(nn.Module):
     def __init__(self, inputImgSize,LayerSizes=[90,90,90],classes=2, channels_in=1): 
         '''
+        Fully connected model version.
         arguments:
             inputImgSize: The dimensions of the input representation, given in height, width
-            channels: Amount of channels (filters) to be used for each conv layer, starting with the first
-            filterSizes: The filter sizes (in tuples) to be used for each conv layer, starting with the first
-            paddings: Padding to be used for each conv layer, starting with the first
-            biases: If biases should be used for conv layers
+            LayerSizes: The number of hidden units in each layer
             classes: Number of classes the task has
             channels_in: Number of input channels the input representation has
         '''
@@ -85,7 +83,7 @@ class EventNetFC(nn.Module):
         self.inputImgSize=inputImgSize
         self.LayerSizes=LayerSizes
         self.channels_in=channels_in
-        self.fc1 = nn.Linear(inputImgSize[0]*inputImgSize[1]*channels_in, LayerSizes[1])
+        self.fc1 = nn.Linear(inputImgSize[0]*inputImgSize[1]*channels_in, LayerSizes[0])
         self.fc2 = nn.Linear(LayerSizes[1], LayerSizes[2])
         self.fc3 = nn.Linear(LayerSizes[2],classes)
         
@@ -108,25 +106,24 @@ class EventNetFC(nn.Module):
     
 #---------------------------------------------------------------
 class EventNetLSTM(nn.Module):
-    def __init__(self, inputImgSize,LayerSizes=[9],classes=2, channels_in=1,layers=3): 
+    def __init__(self, inputImgSize,layer_size=9,layers=3, classes=2, channels_in=1): 
         '''
+        LSTM version of the model. 
         arguments:
             inputImgSize: The dimensions of the input representation, given in height, width
-            channels: Amount of channels (filters) to be used for each conv layer, starting with the first
-            filterSizes: The filter sizes (in tuples) to be used for each conv layer, starting with the first
-            paddings: Padding to be used for each conv layer, starting with the first
-            biases: If biases should be used for conv layers
+            layer_size: The number of lstm cells in each layer
+            layers: How many LSTM layers to use
             classes: Number of classes the task has
             channels_in: Number of input channels the input representation has
         '''
         super(EventNetLSTM, self).__init__()
-        self.layerSizes = LayerSizes*channels_in
+        self.layer_size = layer_size*channels_in
         self.channels_in=channels_in
         self.layers = layers
         self.inputImgSize=inputImgSize
         self.lstm = nn.LSTM(input_size = inputImgSize[0]*channels_in,\
-                            hidden_size=self.layerSizes[0],num_layers=self.layers)
-        self.fc = nn.Linear(self.layerSizes[-1],classes)
+                            hidden_size=self.layer_size,num_layers=self.layers)
+        self.fc = nn.Linear(self.layer_size,classes)
         
         
         if classes>2: warnings.warn("Multiclass problem, make sure you have the correct dataloader.")
@@ -142,8 +139,6 @@ class EventNetLSTM(nn.Module):
      
         hiddens, x =self.lstm(x,self.hidden)
         x=x[0][-1]
-
-        
         x = self.fc(x)
         
         if (self.training):
@@ -154,32 +149,52 @@ class EventNetLSTM(nn.Module):
         return out
     
     def initHidden(self,batch_size):
-        hidden_state = torch.randn(self.layers, batch_size, self.layerSizes[0]).float().cuda()
-        cell_state = torch.randn(self.layers, batch_size, self.layerSizes[0]).float().cuda()
+        hidden_state = torch.randn(self.layers, batch_size, self.layer_size).float().cuda()
+        cell_state = torch.randn(self.layers, batch_size, self.layer_size).float().cuda()
         return (hidden_state, cell_state)
 
 """
 Based on implementation from https://github.com/automan000/Convolution_LSTM_pytorch
 """
-
 class CLSTMEventNet(torch.nn.Module):
-    def __init__(self, num_classes=174, nb_lstm_units=32, channels=3, conv_kernel_size=(5, 5), pool_kernel_size=(2, 2),
-                 top_layer=True, avg_pool=False, max_pool=False,batch_normalization=True, lstm_layers=4, step=16,
-                 image_size=(224, 224), dropout=0, conv_stride=(1, 1), effective_step=[4, 8, 12, 15],
+    '''
+    CLSTM model definition used in the work.
+    arguments:
+        inputImgSize: The dimensions of the input representation, given in height, width
+        classes: Number of classes the task has.
+        nb_lstm_units: How many lstm units should be in each CLSTM layer (number of filters). Default 32
+        channels_in: Number of input channels the input representation has
+        conv_kernel_size: The convolutional filter size used for each layer. Default is (3, 1) in the work.
+        pool_kernel_size: Average pooling kernel size.
+        avg_pool: Applies average pooling between each layer if True. Is False in the work.
+        max_pool: Applies max pooling between each layer if True. Is False in the work.
+        batch_normalization: Applies batch norm between each layer if True. Is False in the work.
+        lstm_layers: How many CLSTM layers to use in the model. 3 were used in the work.
+        step: Input sequence length. Default is 3.
+        dropout: If dropout should be applied between each layer. Default is no dropout.
+        conv_stride: The stride used in the convolutional operations. Default is (1,1).
+        effective_step: Which hidden representations in the sequence is sent to subsequent layers. Default is all.
+        add_softmax: If softmax should be applied for class scores. Default is true.
+        device: Hardware device to use. 
+        
+    '''
+    def __init__(self, inputImgSize=(9, 10), classes=2, nb_lstm_units=32, channels_in=3, conv_kernel_size=(3, 1),\
+                 pool_kernel_size=(2, 2),
+                 avg_pool=False, max_pool=False,batch_normalization=False, lstm_layers=3, step=3,
+                 dropout=0, conv_stride=(1, 1), effective_step=[10],
                  use_entire_seq=False, add_softmax=True,device="cpu"):
 
         super(CLSTMEventNet, self).__init__()
 
-        self.num_classes = num_classes
+        self.classes = classes
         self.nb_lstm_units = nb_lstm_units
-        self.channels = channels
-        self.top_layer = top_layer
+        self.channels = channels_in
         self.avg_pool = avg_pool
         self.max_pool = max_pool
         self.c_kernel_size = conv_kernel_size
         self.lstm_layers = lstm_layers
         self.step = step
-        self.im_size = image_size
+        self.im_size = inputImgSize
         self.pool_kernel_size = pool_kernel_size
         self.batch_normalization = batch_normalization
         self.dropout = dropout
@@ -216,15 +231,13 @@ class CLSTMEventNet(torch.nn.Module):
             self.endFC = torch.nn.Linear(in_features=len(self.effective_step) * self.nb_lstm_units * int(
                 self.im_size[0] / ((self.conv_stride * self.pool_kernel_size[0]) ** self.lstm_layers)) * int(
                 self.im_size[1] / ((self.conv_stride * self.pool_kernel_size[0]) ** self.lstm_layers)),
-                                         out_features=self.num_classes)
+                                         out_features=self.classes)
         else:
             self.endFC = torch.nn.Linear(in_features=self.nb_lstm_units * int(
                 self.im_size[0] / ((self.conv_stride * self.pool_kernel_size[0]) ** self.lstm_layers)) * int(
                 self.im_size[1] / ((self.conv_stride * self.pool_kernel_size[0]) ** self.lstm_layers)),
-                                         out_features=self.num_classes)
+                                         out_features=self.classes)
 
-        print("use entire sequence is: ", self.use_entire_seq)
-        print("shape of FC is: ", self.endFC)
         self.sm = torch.nn.Softmax(dim=1)
 
     def forward(self, x):
@@ -282,10 +295,7 @@ class ConvLSTMCell(nn.Module):
         self.Wco = None
 
     def forward(self, x, h, c):
-        #print("x shape ", x.shape, " h shape: ", h.shape, " c shape: ", c.shape)
-        #print("wci shape: ",self.Wxi(x).shape)
-        #print("whi shape: ", self.Whi(x).shape)
-        #print("self wci op shape: ",(c * self.Wci).shape)
+
         ci = torch.sigmoid(self.Wxi(x) + self.Whi(h) + c * self.Wci)
         cf = torch.sigmoid(self.Wxf(x) + self.Whf(h) + c * self.Wcf)
         cc = cf * c + ci * torch.tanh(self.Wxc(x) + self.Whc(h))
@@ -301,7 +311,7 @@ class ConvLSTMCell(nn.Module):
         else:
             assert shape[0]//self.conv_stride == self.Wci.size()[2], 'Input Height Mismatched! %d vs %d' %(shape[0]//self.conv_stride, self.Wci.size()[2])
             assert shape[1]//self.conv_stride == self.Wci.size()[3], 'Input Width Mismatched!'
-        #print("returning init h of size ", batch_size, hidden, shape[0], shape[1])
+
         return (Variable(torch.zeros(batch_size, hidden, shape[0]//self.conv_stride, shape[1]//self.conv_stride)).to(self.device),
                 Variable(torch.zeros(batch_size, hidden, shape[0]//self.conv_stride, shape[1]//self.conv_stride)).to(self.device))
 
@@ -327,10 +337,8 @@ class ConvLSTM(nn.Module):
         self.batch_norm = batch_normalization
         self.dropout_rate=dropout
         self.device = device
-        #to be pool_size=2, strides=None, padding='valid', data_format='channels_last')
-        #kernel_size, stride=None, padding=0, dilation=1, return_indices=False, ceil_mode=False)
-        self.bn = nn.BatchNorm2d(self.hidden_channels[0], eps=1e-05, momentum=0.1, affine=True) #should prolly be several, and in loop with cell{] thing
-        #name = 'bn'
+
+        self.bn = nn.BatchNorm2d(self.hidden_channels[0], eps=1e-05, momentum=0.1, affine=True) 
         self.dropout = torch.nn.Dropout(p=self.dropout_rate)
         for i in range(self.num_layers):
             name = 'cell{}'.format(i)
@@ -348,19 +356,16 @@ class ConvLSTM(nn.Module):
             for i in range(self.num_layers):
                 # all cells are initialized in the first step
                 name = 'cell{}'.format(i)
-                #print("on cell step ", i ,"with name: ",name)
-                #print("x size is:", x.size())
+
                 if step == 0:
                     bsize, channels, height, width = x.size()
                     (h, c) = getattr(self, name).init_hidden(batch_size=bsize, hidden=self.hidden_channels[i],
                                                              shape=(height,width))
-                                                             #shape=(int(height/max(1,(self.pool_kernel_size[0]*(i)))),\
-                                                             #       int(width/max(1,(self.pool_kernel_size[1]*(i))))))
+                                                             
                     internal_state.append((h, c))
 
                 # do forward
                 (h, c) = internal_state[i]
-                #print("h size is: ", h.size())
                 x, new_c = getattr(self, name)(x, h, c)
                 internal_state[i] = (x, new_c)
                 
@@ -370,11 +375,9 @@ class ConvLSTM(nn.Module):
                     x = self.bn(x)
                 if(self.max_pool):
                     x = self.mp(x)
-                
-                
+                        
             # only record effective steps
             if step in self.effective_step:
                 outputs.append(x)
 
-        #print("returning shape: ", len(outputs), outputs[-1].shape)
         return outputs, (x, new_c)

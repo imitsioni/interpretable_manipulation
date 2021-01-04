@@ -35,7 +35,7 @@ config = {
 'learning_rate' : 1e-03 ,
 'batch_size' : 32,
 'num_workers' : 8,
-'model_type' : "cnn",
+'model_type' : "cnn", #Which model to create (cnn,FC,LSTM)
 'model_name' : None
 }
 
@@ -78,19 +78,22 @@ if(torch.cuda.is_available()):
 else:
     device = torch.device("cpu")
 print(config["model_type"])
-#model definition used in the work
-#original net is f= (1,5), (1,3), (1,1), stride 1, pads 0 all around
+
+#model definitions used in the work
 if(config["model_type"]=="FC"):
-    print("making FC model")
+    #Create the default Fully Connected Network
     model = networks.EventNetFC(inputImgSize=[9,10],LayerSizes=[90,90,90],classes=2, channels_in=1).to(device).float()
+
 elif(config["model_type"]=="LSTM"):
-    print("making LSTM model")
+    #Create the default LSTM Network
     model = networks.EventNetLSTM(inputImgSize=[9,10],LayerSizes=[9,9,9],classes=2, channels_in=1,layers=3).to(device).float()
+
 else:
+    #Convolutional model used for the 2D experiments.
+    #Original net is f= (1,5), (1,3), (1,1), stride 1, pads 0 all around
     model = networks.MultiEventNetTemplate(classes = 2, inputImgSize=[9,10], channels_in=3,channels=[32,64,128],\
                                            filterSizes=[(5,5),(3,3),(2,2)],strides=[(1,1),(1,1),(1,1)],\
                                            paddings=[(5//2,0//2),(3//2,0//2),(2//2,0//2)],biases=True).to(device).float()
-
 
 optimizer = optim.Adam(model.parameters(), lr=config['learning_rate'])
 
@@ -107,19 +110,17 @@ validation_losses = []
 train_F1s = []
 validation_F1s = []
 
-times_taken= []
 for epoch in range(config['epochs']):  
-    #train_loss,trainF1 = trainer.train(epoch)
+    train_loss,trainF1 = trainer.train(epoch)
     t_start = time.time()
     validation_loss, validationF1 = trainer.evaluate(model_title=config['model_name'])
-    #train_losses.append(train_loss)
-    #train_F1s.append(trainF1)
+    train_losses.append(train_loss)
+    train_F1s.append(trainF1)
     validation_losses.append(validation_loss) 
     validation_F1s.append(validationF1)      
 
-    t_end = time.time()
-    times_taken.append(t_end-t_start)
-print("forward passes were: ", np.mean(times_taken))
+t_end = time.time()
 print('Finished Training , took ', (t_end - t_start))
 
+#save resulting model along with the config used for the experiment, and training/evaluation scores
 trainer.saveModel(config['model_name'],train_losses,validation_losses,train_F1s,validation_F1s,config)

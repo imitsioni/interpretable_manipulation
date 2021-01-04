@@ -23,6 +23,7 @@ class TXTImporter(object):
         colormap: Which colormap to use for the RGB representation. Seismic in implementation.
         scaler: scaler used for input data, if already computed during training
         gradcam_scaler_params: scaler used for visually interpretable data display, if already computed during training
+        mono_color: does not render a colored image if set to True, only a matrix with the data
     '''
     def __init__(self, base_path, dataType, block_size, scale_pixels, blocks_per_frame, multi_class, block_horizon,colormap, scaler=None, gradcam_scaler_params=None,mono_color=False):
         self.data = []
@@ -198,6 +199,8 @@ class TXTImporter(object):
         current_block_frame = utils.get_block(self.relative_datasets[d_idx], b_idx, self.block_size)
         current_block_frame_scaled = self.scaler.transform(current_block_frame)
         frame_label = self.getLabel(frame_idx)
+        
+        #no need to render colored image if not using a CNN
         if(self.mono_color):
             return np.transpose(current_block_frame_scaled), frame_label
         else:
@@ -207,8 +210,6 @@ class TXTImporter(object):
             #move channel axis first
             imgOut=imgOut.squeeze()
             imgOut=np.moveaxis(imgOut,-1,0)
-
-            print("render took: ", time.time()-t_start)
             return imgOut, frame_label
 
     def getLabel(self, frame_idx):

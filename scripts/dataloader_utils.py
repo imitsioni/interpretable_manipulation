@@ -14,9 +14,11 @@ class EventDataloader(udata.Dataset):
         blocks_per_frame: How many blocks each input frame should include. 1 in implementation.
         multi_class: If the task should be multi-class classification. False in implementation.
         block_horizon: How many blocks ahead the "stuck/ not stuck" label is referring to. 3 in implementation.
-        colormap: Which colormap to use for the RGB representation. Seismic in implementation.
-        scaler: scaler used for input data, if already computed during training
-        gradcam_scaler_params: scaler used for visually interpretable data display, if already computed during training
+        mono_color: If True, does not render a colored image for the data, only a 1 channel matrix. False in implementation.
+        colormap: Which colormap to use for the RGB representation if mono_color is False. Seismic in implementation.
+        scaler: scaler used for input data, if already computed during training.
+        gradcam_scaler_params: scaler used for visually interpretable data display, if already computed during training.
+        imgs_out: used to define how many images one input corresponds to. Default is 1, can be extended for recurrent models.
     '''
     def __init__(self, base_path, dataType, block_size, scale_pixels = 1, blocks_per_frame = 1, multi_class = False, block_horizon = 3, colormap="seismic", mono_color=False,scaler=None, gradcam_scaler_params=None,imgs_out=1):
 
@@ -43,6 +45,8 @@ class EventDataloader(udata.Dataset):
             return len(self.dh.idxToRunDict)
 
     def __getitem__(self, idx):
+        
+        #zip together a sequence of input images and their true labels if requested (used for recurrent models)
         if(self.imgs_out>1):
             
             outs = []
@@ -55,11 +59,11 @@ class EventDataloader(udata.Dataset):
                     
                 outF_and_labels, out_viz_frames = zip(*outs)
                 out_net_frames,labels = zip(*outF_and_labels)
-                #print("type of first is : ", type(out_viz_frames[0]))
+
                 out_net_frames = np.array(out_net_frames)
                 out_viz_frames = np.array(out_viz_frames)
-                #print("shape before is ", out_viz_frames.shape)
-                #print("shape 1 is ", out_viz_frames[0].shape)
+
+                #reshape to have channel first, then sequence length
                 out_net_frames = out_net_frames.reshape(3,self.imgs_out,9,self.block_size)
                 out_viz_frames = out_viz_frames.reshape(3,self.imgs_out,9,self.block_size)
                 
@@ -70,14 +74,15 @@ class EventDataloader(udata.Dataset):
                     out = self.dh.getFrame(idx)
                     outs.append(out)
             
-                outFrames, labels = zip(*outs)
-                #print("type of first is : ", type(outFrames[0]))
-                outFrames = np.array(outFrames)#torch.from_numpy(np.array(inputs))
-                #print("shape before is ", outFrames.shape)
-                outFrames = outFrames.reshape(3,self.imgs_out,9,self.block_size)
-                #print("shape is ", outFrames.shape)
-                return [outFrames,labels[-1]]
-
+                out_frames, labels = zip(*outs)
+                out_frames = np.array(out_frames)
+                #reshape to have channel first, then sequence length
+                out_frames = out_frames.reshape(3,self.imgs_out,9,self.block_size)
+                
+                #ground truth label for a sequence is the label of the last image
+                return [out_frames,labels[-1]]
+            
+        #otherwise just return one image as the datapoint
         else:
             if(self.dataType=="visual"):
                 out_net = self.dh.getFrame(idx)

@@ -1,3 +1,6 @@
+'''
+Code adapted from https://github.com/TwentyBN/smth-smth-v2-baseline-with-models/blob/master/grad_cam_videos.py
+'''
 import sys
 import torch
 import cv2
@@ -25,28 +28,15 @@ class ModelOutputsVideo(ModelOutputs):
 
     def __call__(self, x):
         target_activations, output = self.feature_extractor(x)
-
-        if(self.archType=="I3D"):
-            output = self.model.logits(self.model.dropout(self.model.avg_pool(output)))
-
-            if self.model._spatial_squeeze:
-                output = output.squeeze(3).squeeze(3).squeeze()
-                
-            if(len(output.shape)<2):
-                output=output[None,:]
-
-            if(self.model.softMax):
-                #print("output shape before softmax: ", output.shape)
-                output = self.smlayer(output)
             
         return target_activations, output
 
 
 class GradCamVideo(GradCam):
     def __init__(self, model, target_layer_names, class_dict, use_cuda,
-                 input_spatial_size=224, normalizePerFrame=False, archType="I3D"):
+                 input_spatial_size=224, normalizePerFrame=False, archType="CLSTM"):
         self.model = model
-        #self.model.eval()
+
         self.archType=archType
         self.cuda = use_cuda
         self.normalizePerFrame = normalizePerFrame
@@ -84,38 +74,26 @@ class GradCamVideo(GradCam):
 
         grads_val = self.extractor.get_gradients()[-1].cpu().data.numpy()
         
+        #Need to put sequence dimension in correct spot again if using pytorch CLSTM
         if(self.archType=="CLSTM"):
             grads_val = grads_val.transpose(1,2,0,3,4)
             target = features[-1].permute(1,2,0,3,4)
         else:
             target = features[-1]
             
-        #print("gradsval shape before avereage slice: ", grads_val.shape)
-        
-        #print("target shape before that 0 slice: ", target.shape)
         target = target.cpu().data.numpy()[0, :]
-
         weights = np.mean(grads_val, axis=(2, 3, 4))[0, :]
-        
-
         cam = np.zeros(target.shape[1:], dtype=np.float32)
 
         for i, w in enumerate(weights):
-            #if(w<0):
-                #print("weight ", i, " was negative: ", w)
-            #if((target[i, :, :, :]<0).any()):
-            #    print("activation ", i ," was negative")
             cam += np.maximum(w * target[i, :, :, :],0)
 
-        #cam = np.maximum(cam, 0)
-        #print("cam size:", cam.shape)
         clip_size = input.size(2)
         step_size = clip_size // target.shape[1]
 
         cam_vid = []
         for i in range(cam.shape[0]):
             cam_map = cam[i, :, :]
-            #print("cam map shape", cam_map.shape)
             cam_map = cv2.resize(cam_map,
                                  (self.input_spatial_size[1], self.input_spatial_size[0]))#WARNING: was 0,1
             cam_vid.append(np.repeat(
@@ -138,5 +116,5 @@ class GradCamVideo(GradCam):
             cam_vid = np.concatenate(cam_vid, axis=0)
         if cam_vid.shape[0] == 1:
             cam_vid = np.squeeze(cam_vid, 0)
-        #print("Shape of CAM mask produced = {}".format(cam_vid.shape))
+
         return cam_vid, output

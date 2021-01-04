@@ -27,25 +27,33 @@ class FeatureExtractor():
         outputs = []
         self.gradients = []
         for name, module in self.model._modules.items():
+            #If not using CLSTM, simply reshape for last layer and attach gradient hooks.
             if(self.archType!="CLSTM"):
                 if (self.archType == "normal" and name == "fc1"):
                     x = module(x.view(-1,self.model.channels[-1]*self.model.h*self.model.w))
-                elif (self.archType == "small" and name == "fc1"):
-                    x = module(x.view(-1,self.model.channels[-1]*self.model.h*self.model.w))
-                elif (self.archType == "old" and name == "fc1"):
-                    x = module(x.view(-1,128*9*10))
                 else:
                     x = module(x)
                 if name in self.target_layers:
                     x.register_hook(self.save_gradient)
                     outputs += [x]
-   ##_-----------------------------------------------------------------           
+       
+            #if using CLSTM, reshape for last FC layer, and keep gradients for all LSTM hidden representations in the sequence
             else:
                 if(self.archType=="CLSTM" and name=="endFC" and self.model.use_entire_seq==False):
-                    #operating on aggOut here instead to handle hook
-                    x = module(aggOut[-1].view(-1,self.model.nb_lstm_units*int(self.model.im_size[0]/((self.model.conv_stride*self.model.pool_kernel_size[0])**self.model.lstm_layers))*int(self.model.im_size[1]/((self.model.conv_stride*self.model.pool_kernel_size[0])**self.model.lstm_layers))))
+
+                    x = module(aggOut[-1].view(-1,self.model.nb_lstm_units\
+                                       *int(self.model.im_size[0]/((self.model.conv_stride*\
+                                        self.model.pool_kernel_size[0])**self.model.lstm_layers))\
+                                       *int(self.model.im_size[1]/((self.model.conv_stride*\
+                                        self.model.pool_kernel_size[0])\
+                                                                   **self.model.lstm_layers))))
                 elif(self.archType=="CLSTM" and name=="endFC"):
-                    x = module(temp.view(-1,len(self.model.effective_step)*self.model.nb_lstm_units*int(self.model.im_size[0]/((self.model.conv_stride*self.model.pool_kernel_size[0])**self.model.lstm_layers))*int(self.model.im_size[1]/((self.model.conv_stride*self.model.pool_kernel_size[0])**self.model.lstm_layers))))
+                    x = module(temp.view(-1,len(self.model.effective_step)*self.model.nb_lstm_units\
+                                         *int(self.model.im_size[0]/((self.model.conv_stride\
+                                          *self.model.pool_kernel_size[0])**self.model.lstm_layers))\
+                                         *int(self.model.im_size[1]/((self.model.conv_stride\
+                                          *self.model.pool_kernel_size[0])\
+                                                                     **self.model.lstm_layers))))
                 else:
                     x = module(x)
                     
@@ -53,7 +61,7 @@ class FeatureExtractor():
                     if(self.archType=="CLSTM" and name=="clstm" and self.model.use_entire_seq==False):
                         aggOut = Variable(torch.stack(x[0]), requires_grad=True)
                         aggOut.register_hook(self.save_gradient)
-                        outputs += [aggOut]#[x[0][-1]]
+                        outputs += [aggOut]
                     elif(self.archType=="CLSTM" and name=="clstm"):
                         temp = torch.stack(x[0])
                         temp.register_hook(self.save_gradient)
@@ -61,7 +69,6 @@ class FeatureExtractor():
                     else:
                         x.register_hook(self.save_gradient)
                         outputs += [x]
-#-----------------------------------------------------------------
 
         return outputs, x
 
@@ -171,13 +178,13 @@ class FeatureEvaluator(object):
             gradCamImage: The produced GradCam image for the sample
         '''
         if(predClass==0 and GT == 0):
-            currentCase = 'TN'
-        elif(predClass==0 and GT == 1):
-            currentCase = 'FN'
-        elif(predClass==1 and GT == 0):
-            currentCase = 'FP'
-        elif(predClass==1 and GT == 1):
             currentCase = 'TP'
+        elif(predClass==0 and GT == 1):
+            currentCase = 'FP'
+        elif(predClass==1 and GT == 0):
+            currentCase = 'FN'
+        elif(predClass==1 and GT == 1):
+            currentCase = 'TN'
 
         self.caseCounts[currentCase] += 1
 

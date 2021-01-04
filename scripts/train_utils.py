@@ -25,18 +25,7 @@ class TrainUtils():
         labels_list = []
         time_start = time.time()
         for i, data in enumerate(self.train_loader, 0):
-            # get the inputs; data is a list of [inputs, labels]
-            '''
-            if(self.train_loader.dataset.imgs_out>1):
-                inputs, labels = zip(*data)
-                
-                inputs = torch.cat(inputs)#torch.from_numpy(np.array(inputs))
-                print("shape is ", inputs.shape)
-                labels=labels[-1]
-            else:
-                inputs, labels = data
-            '''
-            
+            # get the inputs; data is a list of [inputs, labels]            
             inputs, labels = data
             inputs = inputs.to(self.device)
             inputs = inputs.float()
@@ -116,7 +105,10 @@ class TrainUtils():
             print("test classification report:")
             print(sklm.classification_report(labels_list, predictions_list))
             print('=========================================================')
-            epoch_f1=sklm.classification_report(labels_list, predictions_list,output_dict=True)['weighted avg']['f1-score']
+            scores = sklm.classification_report(labels_list, predictions_list,output_dict=True)
+            epoch_f1=scores['weighted avg']['f1-score']
+            
+            #Save and keep track of best performing model parameters
             if(epoch_f1>self.best_val_F1 and model_title!=None):
                 folder = "trained_models/"+model_title+"/"
                 if not os.path.exists(folder):
@@ -125,24 +117,27 @@ class TrainUtils():
                 self.best_val_F1 = epoch_f1
                 
         return np.mean(losses),epoch_f1
-    def saveModel(self, model_title,trainLosses=None,validationLosses=None,train_F1s=None,validation_F1s=None,config=None):
+    
+    def saveModel(self, model_title,train_losses=None,validation_losses=None,train_F1s=None,validation_F1s=None,config=None):
         folder = "trained_models/"+model_title+"/"
         if not os.path.exists(folder):
             os.makedirs(folder)
 
-        #torch.save(self.best_model, folder+"model_best.pt")
+        #save model checkpoint
         torch.save(self.model.state_dict(), folder+"checkpoint.pt")
-        if(trainLosses!=None and validationLosses!=None):
+        
+        #save data and graphs for losses and F1 scores if available
+        if(train_losses!=None and validation_losses!=None):
             lossGraph = plt.figure(dpi=200)
-            plt.plot(trainLosses,label="Train")
-            plt.plot(validationLosses,label="Test")
+            plt.plot(train_losses,label="Train")
+            plt.plot(validation_losses,label="Test")
             plt.xlabel("Epoch")
             plt.ylabel("Loss")
             plt.legend()
             plt.savefig(folder+"/losses.png")
             plt.close()
-            pickle.dump(trainLosses, open(folder+"train_losses.p", "wb"))
-            pickle.dump(validationLosses, open(folder+"validation_losses.p", "wb"))
+            pickle.dump(train_losses, open(folder+"train_losses.p", "wb"))
+            pickle.dump(validation_losses, open(folder+"validation_losses.p", "wb"))
         if(train_F1s!=None and validation_F1s!=None):
             lossGraph = plt.figure(dpi=200)
             plt.plot(train_F1s,label="Train")
@@ -154,6 +149,8 @@ class TrainUtils():
             plt.close()
             pickle.dump(train_F1s, open(folder+"train_F1s.p", "wb"))
             pickle.dump(validation_F1s, open(folder+"validation_F1s.p", "wb"))
+            
+        #save used config for easier reproduction when loading model
         if(config!=None):
             pickle.dump(config,open(folder+"config.p","wb"))
 
