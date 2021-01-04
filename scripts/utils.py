@@ -1,6 +1,3 @@
-'''
-MISC Utilities.
-'''
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -59,7 +56,7 @@ def get_feature_abs_max(data):
 
 def load_args(defaultConfig):
     
-    #load args
+    # Load args
     parser = argparse.ArgumentParser(description='Training script for EventNet')
 
     parser.add_argument('--resume', '-r', action='store_true',
@@ -88,14 +85,16 @@ def load_args(defaultConfig):
                         help="colormap to be used for input rendering")
     parser.add_argument('--modelName', '-m', type=str,
                         help="What the saved model should be called")
+    parser.add_argument('--model_type', '-ma', type=str,
+                        help="What architecture to use for the model (cnn,FC,LSTM)")
         
     args = parser.parse_args()
     
-    if len(sys.argv) < 2: #model name must at least be given
+    if len(sys.argv) < 2: # model name must at least be given
         parser.print_help()
         sys.exit(1)
         
-    #overwrite defaults with any given arguments
+    # Overwrite defaults with any given arguments
     if(args.learning_rate is not None):
         defaultConfig['learning_rate'] = args.learning_rate
     if(args.batch_size is not None):
@@ -118,5 +117,8 @@ def load_args(defaultConfig):
         defaultConfig['colormap'] = args.colormap
     if(args.modelName is not None):
         defaultConfig['model_name'] = args.modelName
+    if(args.model_type is not None):
+        defaultConfig['model_type'] = args.model_type
+
 
     return defaultConfig,args
