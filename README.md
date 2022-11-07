@@ -1,5 +1,5 @@
 # Interpetability in Contact-Rich Manipulation Tasks via Kinodynamic Images
-**Link to manuscript coming soon**.
+You can find the paper [here](https://ieeexplore.ieee.org/abstract/document/9560920) and [here] (https://arxiv.org/pdf/2102.11825.pdf).
 
 Deep Neural Networks (NNs) have been widely utilized in contact-rich manipulation tasks to model the complicated contact dynamics. However, NN-based models are often difficult to decipher which can lead to seemingly inexplicable behaviors and unidentifiable failure cases. In this work, we address the interpretability of NN-based models by introducing the kinodynamic images.
 We propose a methodology that creates images from the kinematic and dynamic data of a contact-rich manipulation task. Our formulation visually reflects the task's state by encoding its kinodynamic variations and temporal evolution, for example during cutting:
